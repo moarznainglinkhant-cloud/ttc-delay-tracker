@@ -6,8 +6,8 @@ Toronto's public [Open Data Portal](https://open.toronto.ca/) — no
 scraping, just a documented, ToS-friendly API. The data refreshes itself
 daily via a scheduled GitHub Actions job.
 
-![CI](https://github.com/<your-username>/<your-repo>/actions/workflows/ci.yml/badge.svg)
-![Update Data](https://github.com/<your-username>/<your-repo>/actions/workflows/update-data.yml/badge.svg)
+![CI](https://github.com/moarznainglinkhant-cloud/ttc-delay-tracker/actions/workflows/ci.yml/badge.svg)
+![Update Data](https://github.com/moarznainglinkhant-cloud/ttc-delay-tracker/actions/workflows/update-data.yml/badge.svg)
 
 **Live demo:** _add your Streamlit Community Cloud URL here once deployed_
 
