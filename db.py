@@ -1,5 +1,5 @@
 """
-Tiny SQLite storage layer for cleaned TTC delay rows.
+Tiny SQLite storage layer for cleaned TTC delay rows (bus + subway).
 """
 from __future__ import annotations
 
@@ -29,9 +29,23 @@ CREATE INDEX IF NOT EXISTS idx_delays_date ON delays(date);
 """
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns that didn't exist in earlier versions of this schema.
+
+    Safe to call every time: only alters the table if the column is
+    actually missing, so it's a no-op on an already-migrated database.
+    """
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(delays)")}
+    if "mode" not in existing_cols:
+        # Rows inserted before "mode" existed were all bus records.
+        conn.execute("ALTER TABLE delays ADD COLUMN mode TEXT NOT NULL DEFAULT 'bus'")
+        conn.commit()
+
+
 def get_connection(db_path: str | Path = DB_PATH) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
 
 
@@ -42,10 +56,10 @@ def insert_rows(conn: sqlite3.Connection, rows: list[dict]) -> int:
     cur = conn.executemany(
         """
         INSERT OR IGNORE INTO delays
-            (date, route, route_name, time, day, location, code,
+            (mode, date, route, route_name, time, day, location, code,
              min_delay, min_gap, bound, vehicle)
         VALUES
-            (:date, :route, :route_name, :time, :day, :location, :code,
+            (:mode, :date, :route, :route_name, :time, :day, :location, :code,
              :min_delay, :min_gap, :bound, :vehicle)
         """,
         rows,

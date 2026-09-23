@@ -9,8 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from clean import (  # noqa: E402
     extract_route_number,
     is_route_of_interest,
+    is_subway_line_of_interest,
     normalize_record,
     normalize_records,
+    normalize_subway_record,
+    normalize_subway_records,
     to_int_or_none,
 )
 
@@ -55,6 +58,7 @@ def test_normalize_record_valid():
     }
     row = normalize_record(raw)
     assert row is not None
+    assert row["mode"] == "bus"
     assert row["date"] == "2025-01-01"
     assert row["route"] == "116"
     assert row["route_name"] == "Morningside"
@@ -87,3 +91,48 @@ def test_normalize_records_batch():
     cleaned = normalize_records(raws)
     assert len(cleaned) == 2
     assert {r["route"] for r in cleaned} == {"116", "995"}
+
+
+def test_is_subway_line_of_interest():
+    assert is_subway_line_of_interest("BD") is True
+    assert is_subway_line_of_interest("bd") is True  # case-insensitive
+    assert is_subway_line_of_interest("YU") is False
+    assert is_subway_line_of_interest(None) is False
+
+
+def test_normalize_subway_record_valid():
+    raw = {
+        "Date": "2025-01-01",
+        "Time": "08:15",
+        "Day": "Wednesday",
+        "Station": "KENNEDY STATION",
+        "Code": "MUSAN",
+        "Min Delay": "5",
+        "Min Gap": "9",
+        "Bound": "W",
+        "Line": "BD",
+        "Vehicle": "5227",
+    }
+    row = normalize_subway_record(raw)
+    assert row is not None
+    assert row["mode"] == "subway"
+    assert row["route"] == "BD"
+    assert row["route_name"] == "Line 2 Bloor–Danforth"
+    assert row["min_delay"] == 5
+    assert row["location"] == "KENNEDY STATION"
+
+
+def test_normalize_subway_record_filters_other_lines():
+    raw = {"Date": "2025-01-01", "Line": "YU", "Min Delay": "5"}
+    assert normalize_subway_record(raw) is None
+
+
+def test_normalize_subway_records_batch():
+    raws = [
+        {"Date": "2025-01-01", "Line": "BD", "Min Delay": "5"},
+        {"Date": "2025-01-01", "Line": "YU", "Min Delay": "3"},
+        {"Date": "2025-01-02", "Line": "SHP", "Min Delay": "1"},
+    ]
+    cleaned = normalize_subway_records(raws)
+    assert len(cleaned) == 1
+    assert cleaned[0]["route"] == "BD"

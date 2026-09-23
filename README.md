@@ -1,10 +1,10 @@
 # UTSC Commute Delay Tracker 🚌
 
-A small data pipeline + dashboard that tracks TTC bus delays on routes
-near **University of Toronto Scarborough (UTSC)**, built on the City of
-Toronto's public [Open Data Portal](https://open.toronto.ca/) — no
-scraping, just a documented, ToS-friendly API. The data refreshes itself
-daily via a scheduled GitHub Actions job.
+A small data pipeline + dashboard that tracks TTC bus and subway delays
+relevant to a **University of Toronto Scarborough (UTSC)** commute,
+built on the City of Toronto's public [Open Data Portal](https://open.toronto.ca/) —
+no scraping, just a documented, ToS-friendly API. The data refreshes
+itself daily via a scheduled GitHub Actions job.
 
 ![CI](https://github.com/moarznainglinkhant-cloud/ttc-delay-tracker/actions/workflows/ci.yml/badge.svg)
 ![Update Data](https://github.com/moarznainglinkhant-cloud/ttc-delay-tracker/actions/workflows/update-data.yml/badge.svg)
@@ -13,20 +13,34 @@ daily via a scheduled GitHub Actions job.
 
 ## What it does
 
-1. **Fetches** TTC bus delay records from the City of Toronto's CKAN API
-   (`fetch_data.py`) — refreshed automatically every day
-2. **Cleans & filters** them down to routes relevant to a UTSC commute
-   (`clean.py`) — edit `config.py` to match your own routes
+1. **Fetches** TTC bus *and* subway delay records from the City of
+   Toronto's CKAN API (`fetch_data.py`) — refreshed automatically every day
+2. **Cleans & filters** them down to what matters for a UTSC commute
+   (`clean.py`) — bus routes near campus, and Line 2 (Bloor–Danforth)
+   subway delays for the Kennedy Station leg — edit `config.py` to match
+   your own routes
 3. **Stores** them in a local SQLite database, deduplicated (`db.py`)
-4. **Visualizes** delay trends, worst days/times, and common delay
-   causes in an interactive Streamlit dashboard (`dashboard.py`)
+4. **Visualizes** two things:
+   - **Overview** (`dashboard.py`) — delay trends, worst days/times, and
+     common delay causes for your tracked bus routes
+   - **Commute Planner** (`pages/1_Commute_Planner.py`) — combines the
+     bus-to-Kennedy leg with the Line 2 subway leg to St. George Station
+     to estimate which hours/days are historically the least
+     delay-prone time to travel between UTSC and the St. George campus
 
 ## Why this exists
 
-Anyone who commutes to UTSC by bus knows some routes are far less
-reliable than others. Instead of relying on vibes, this pulls real
-historical delay data and shows which routes/times are actually worth
-avoiding.
+Anyone who commutes between UTSC and downtown knows some times of day
+are far less reliable than others. Instead of relying on vibes, this
+pulls real historical delay data for both legs of the trip and surfaces
+which departure windows have actually held up.
+
+**Honesty about what the numbers mean:** the City's delay datasets log
+*incidents*, not every scheduled trip, so there's no way to compute a
+true "% chance of being late." What the Commute Planner shows is a
+relative reliability signal, based on how often and how severely delays
+were logged at each hour/day, which is still a meaningfully better
+signal than guessing.
 
 ## Quickstart
 
@@ -44,12 +58,17 @@ streamlit run dashboard.py
 ```
 
 Then open the local URL Streamlit prints (usually http://localhost:8501).
+The Commute Planner page is in the sidebar nav once the app is running.
 
 ## Configuration
 
-Edit `ROUTES_OF_INTEREST` in `config.py` to track different routes —
-it's just a dict of route number → friendly name, matched against the
-City's `"Line"` field (e.g. `"116 MORNINGSIDE"`).
+Edit `config.py` to match your own commute:
+
+- `ROUTES_OF_INTEREST` — dict of bus route number → friendly name,
+  matched against the City's `"Line"` field (e.g. `"116 MORNINGSIDE"`)
+- `SUBWAY_LINE_OF_INTEREST` — the subway line code for your commute's
+  subway leg (`"BD"` for Kennedy → St. George on Line 2; use `"YU"` for
+  Line 1, `"SHP"` for Line 4)
 
 ## Tests & CI
 
@@ -58,8 +77,9 @@ pytest -v
 ```
 
 `clean.py` and `db.py` are pure/isolated enough to unit test without
-hitting the network — see `tests/`. Two GitHub Actions workflows keep
-this repo honest:
+hitting the network — see `tests/` (18 tests, covering bus + subway
+normalization and the database migration path). Two GitHub Actions
+workflows keep this repo honest:
 
 - **`ci.yml`** — runs the test suite on every push and pull request
 - **`update-data.yml`** — runs `fetch_data.py` daily on a schedule and
@@ -79,16 +99,19 @@ The badges at the top of this README reflect the latest runs of each.
 4. Deploy — you'll get a permanent `*.streamlit.app` URL. Put that link
    directly on your resume/LinkedIn next to this project.
 
-## Data source
+## Data sources
 
-[TTC Bus Delay Data](https://open.toronto.ca/dataset/ttc-bus-delay-data/) —
-City of Toronto Open Data Portal, published by the TTC, updated
-regularly. Fetched via the CKAN `datastore_search` API, respecting
-pagination with a small delay between requests.
+- [TTC Bus Delay Data](https://open.toronto.ca/dataset/ttc-bus-delay-data/)
+- [TTC Subway Delay Data](https://open.toronto.ca/dataset/ttc-subway-delay-data/)
+
+Both from the City of Toronto Open Data Portal, published by the TTC
+and updated regularly. Fetched via the CKAN `datastore_search` API,
+respecting pagination with a small delay between requests.
 
 ## Possible extensions
 
-- Add the subway delay dataset (`ttc-subway-delay-data`) for the
-  Line 3 Scarborough replacement shuttle
-- Email/Slack alert when a tracked route has an unusually bad week
+- Add GTFS scheduled-trip data to estimate actual added travel time,
+  not just relative delay-incident frequency
+- Email/Slack alert when a tracked route or the subway leg has an
+  unusually bad week
 - A "reliability score" per route combining delay frequency and severity

@@ -21,6 +21,8 @@ def load_data(db_path: str) -> pd.DataFrame:
     conn = sqlite3.connect(db_path)
     df = pd.read_sql_query("SELECT * FROM delays", conn)
     conn.close()
+    if "mode" in df.columns:
+        df = df[df["mode"] == "bus"]  # subway lives on the Commute Planner page
     if not df.empty:
         df["date"] = pd.to_datetime(df["date"])
         df["route_label"] = df["route"] + " " + df["route_name"].fillna("")
@@ -32,6 +34,7 @@ st.caption(
     "TTC bus delay data for routes near University of Toronto Scarborough, "
     "from the City of Toronto Open Data portal."
 )
+st.page_link("pages/1_Commute_Planner.py", label="→ Plan the UTSC to St. George commute", icon="🗺️")
 
 try:
     df = load_data(DB_PATH)
