@@ -42,6 +42,24 @@ relative reliability signal, based on how often and how severely delays
 were logged at each hour/day, which is still a meaningfully better
 signal than guessing.
 
+## Findings
+
+A few things the data actually showed, pulled from the live database:
+
+- **Day of week barely matters.** Average delay only moves between
+  12.0 and 12.9 minutes across all seven days — Monday isn't
+  meaningfully worse than Wednesday, and weekends aren't meaningfully
+  calmer than weekdays. The common assumption that certain days are
+  just "bad days" doesn't hold up here.
+- **The subway leg is far more reliable than the bus leg.** Line 2's
+  typical average delay is ~2.4 minutes versus the bus's ~12.4 minutes
+  — almost all of this commute's unpredictability comes from getting
+  to Kennedy Station, not the subway ride itself.
+- **Best/worst time to travel:** combined delay risk is lowest around
+  3pm (~13.7 min avg) and highest around 10pm (~17.1 min avg), with a
+  secondary bump around 6-7am (~16.7 min avg). Midafternoon is the
+  sweet spot; early morning and late evening are the riskiest windows.
+
 ## Quickstart
 
 ```bash
