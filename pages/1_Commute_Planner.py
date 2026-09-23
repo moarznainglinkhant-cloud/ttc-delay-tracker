@@ -24,8 +24,11 @@ import pandas as pd
 import streamlit as st
 
 from config import DB_PATH, KENNEDY_STATION, ST_GEORGE_STATION, SUBWAY_LINE_OF_INTEREST
+from theme import CATEGORICAL_RANGE, SEQUENTIAL_SCHEME, apply_altair_theme, inject_page_css
 
 st.set_page_config(page_title="UTSC → UTSG Commute Planner", page_icon="🗺️", layout="wide")
+apply_altair_theme()
+st.markdown(inject_page_css(), unsafe_allow_html=True)
 
 DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 WEEKDAYS = DAY_ORDER[:5]
@@ -151,7 +154,7 @@ heatmap = (
         color=alt.Color(
             "total_delay:Q",
             title="Avg delay (min)",
-            scale=alt.Scale(scheme="blues"),
+            scale=alt.Scale(scheme=SEQUENTIAL_SCHEME),
         ),
         tooltip=[
             alt.Tooltip("day:N", title="Day"),
@@ -176,11 +179,11 @@ by_hour_leg = by_hour_leg.groupby(["hour", "leg"], as_index=False)["avg_delay"].
 
 line_chart = (
     alt.Chart(by_hour_leg)
-    .mark_line(point=True)
+    .mark_line(point=alt.OverlayMarkDef(size=35, filled=True), strokeWidth=2)
     .encode(
         x=alt.X("hour:O", title="Hour of day", axis=alt.Axis(labelAngle=0)),
         y=alt.Y("avg_delay:Q", title="Avg logged delay (min)"),
-        color=alt.Color("leg:N", title=None, scale=alt.Scale(range=["#1f77b4", "#e07b39"])),
+        color=alt.Color("leg:N", title=None, scale=alt.Scale(range=CATEGORICAL_RANGE)),
         tooltip=["hour", "leg", alt.Tooltip("avg_delay:Q", format=".1f")],
     )
     .properties(height=280)
