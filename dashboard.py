@@ -116,7 +116,7 @@ with left:
         )
         .properties(height=320)
     )
-    st.altair_chart(route_chart, use_container_width=True)
+    st.altair_chart(route_chart, width='stretch')
 
 with right:
     st.subheader("Which days are worst?")
@@ -139,7 +139,7 @@ with right:
         )
         .properties(height=320)
     )
-    st.altair_chart(weekday_chart, use_container_width=True)
+    st.altair_chart(weekday_chart, width='stretch')
 
 # --- Trend over time ---
 st.subheader("Delay events over time")
@@ -155,7 +155,7 @@ trend_chart = (
     )
     .properties(height=260)
 )
-st.altair_chart(trend_chart, use_container_width=True)
+st.altair_chart(trend_chart, width='stretch')
 
 # --- Delay reasons ---
 st.subheader("Most common delay codes")
@@ -172,7 +172,7 @@ code_chart = (
     )
     .properties(height=320)
 )
-st.altair_chart(code_chart, use_container_width=True)
+st.altair_chart(code_chart, width='stretch')
 
 if len(disruptions):
     st.subheader("Major disruptions (excluded from the metrics above)")
@@ -186,12 +186,12 @@ if len(disruptions):
         disruptions.sort_values("min_delay", ascending=False)[
             ["date", "route_label", "time", "location", "code", "min_delay"]
         ],
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
 with st.expander("Raw data (all events, including disruptions)"):
-    st.dataframe(filtered.sort_values("date", ascending=False), use_container_width=True)
+    st.dataframe(filtered.sort_values("date", ascending=False), width='stretch')
 
 st.caption(
     "Data source: City of Toronto Open Data — TTC Bus Delay Data. "

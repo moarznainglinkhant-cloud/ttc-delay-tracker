@@ -172,7 +172,7 @@ heatmap = (
     )
     .properties(height=280)
 )
-st.altair_chart(heatmap, use_container_width=True)
+st.altair_chart(heatmap, width='stretch')
 
 # --- Bus vs subway comparison by hour ---
 st.subheader("Which leg is riskier, the bus or the subway?")
@@ -193,7 +193,7 @@ line_chart = (
     )
     .properties(height=280)
 )
-st.altair_chart(line_chart, use_container_width=True)
+st.altair_chart(line_chart, width='stretch')
 
 st.caption(
     f"Subway leg filtered to Line 2 (Bloor–Danforth) — the direct ride from "
