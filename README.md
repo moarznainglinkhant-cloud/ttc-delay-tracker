@@ -9,7 +9,7 @@ itself daily via a scheduled GitHub Actions job.
 ![CI](https://github.com/moarznainglinkhant-cloud/ttc-delay-tracker/actions/workflows/ci.yml/badge.svg)
 ![Update Data](https://github.com/moarznainglinkhant-cloud/ttc-delay-tracker/actions/workflows/update-data.yml/badge.svg)
 
-**Live demo:** _add your Streamlit Community Cloud URL here once deployed_
+**Live demo:** https://ttc-delay-tracker-56pbzhwscg9z9k7tbuyzlm.streamlit.app/
 
 ## What it does
 
