@@ -35,7 +35,7 @@ def load_data(db_path: str) -> pd.DataFrame:
 
 header_col, link_col = st.columns([3, 1])
 with header_col:
-    st.title("🚌 UTSC Commute Delay Tracker")
+    st.title("UTSC Commute Delay Tracker")
     st.caption(
         "TTC bus delay data for routes near University of Toronto Scarborough, "
         "from the City of Toronto Open Data portal."
