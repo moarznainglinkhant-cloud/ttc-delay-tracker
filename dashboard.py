@@ -12,6 +12,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from analysis import split_typical_and_disruptions
 from config import DB_PATH
 from theme import ACCENT, BUS_SEQUENTIAL_SCHEME, apply_altair_theme, inject_page_css
 
@@ -67,13 +68,25 @@ if isinstance(date_range, tuple) and len(date_range) == 2:
     start, end = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
     filtered = filtered[(filtered["date"] >= start) & (filtered["date"] <= end)]
 
+# Some logged "delays" are actually multi-hour route diversions or major
+# incidents (TTC logs the full event duration, not a single bus's
+# lateness) — see config.py. Those would badly skew averages/maxes, so
+# magnitude-based metrics below use `typical` and disruptions get their
+# own section instead of being silently dropped.
+typical, disruptions = split_typical_and_disruptions(filtered)
+
 # --- Top-line stats ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Total delay events", f"{len(filtered):,}")
-col2.metric("Avg delay (min)", f"{filtered['min_delay'].mean():.1f}" if len(filtered) else "–")
-col3.metric("Worst single delay (min)", f"{filtered['min_delay'].max():.0f}" if len(filtered) else "–")
-worst_route = filtered.groupby("route_label")["min_delay"].sum().idxmax() if len(filtered) else "–"
+col2.metric("Avg delay (min)", f"{typical['min_delay'].mean():.1f}" if len(typical) else "–")
+col3.metric("Worst single delay (min)", f"{typical['min_delay'].max():.0f}" if len(typical) else "–")
+worst_route = typical.groupby("route_label")["min_delay"].sum().idxmax() if len(typical) else "–"
 col4.metric("Route with most total delay", worst_route)
+record_word = "record" if len(disruptions) == 1 else "records"
+st.caption(
+    f"Metrics above exclude {len(disruptions):,} major-disruption {record_word} "
+    "(multi-hour diversions/incidents) so a single event doesn't distort the numbers — see them below."
+)
 
 st.divider()
 
@@ -83,7 +96,7 @@ left, right = st.columns(2)
 with left:
     st.subheader("Total delay minutes by route")
     by_route = (
-        filtered.groupby("route_label", as_index=False)["min_delay"]
+        typical.groupby("route_label", as_index=False)["min_delay"]
         .sum()
         .sort_values("min_delay", ascending=False)
     )
@@ -109,7 +122,7 @@ with right:
     st.subheader("Which days are worst?")
     day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     by_weekday = (
-        filtered.groupby("day", as_index=False)["min_delay"].mean()
+        typical.groupby("day", as_index=False)["min_delay"].mean()
     )
     by_weekday["day"] = pd.Categorical(by_weekday["day"], categories=day_order, ordered=True)
     by_weekday = by_weekday.sort_values("day")
@@ -161,7 +174,23 @@ code_chart = (
 )
 st.altair_chart(code_chart, use_container_width=True)
 
-with st.expander("Raw data"):
+if len(disruptions):
+    st.subheader("Major disruptions (excluded from the metrics above)")
+    st.caption(
+        "Route-wide diversions (TTC delay code MFDV) and any single incident over "
+        f"{180} minutes. These are real, City-published records — they're just "
+        "measuring 'how long was this route disrupted,' not 'how late was my bus,' "
+        "so mixing them into averages would be misleading."
+    )
+    st.dataframe(
+        disruptions.sort_values("min_delay", ascending=False)[
+            ["date", "route_label", "time", "location", "code", "min_delay"]
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+with st.expander("Raw data (all events, including disruptions)"):
     st.dataframe(filtered.sort_values("date", ascending=False), use_container_width=True)
 
 st.caption(

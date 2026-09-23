@@ -23,6 +23,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from analysis import split_typical_and_disruptions
 from config import DB_PATH, KENNEDY_STATION, ST_GEORGE_STATION, SUBWAY_LINE_OF_INTEREST
 from theme import CATEGORICAL_RANGE, SEQUENTIAL_SCHEME, apply_altair_theme, inject_page_css
 
@@ -71,8 +72,12 @@ if "mode" not in df.columns:
     st.stop()
 
 df = add_hour(df)
-bus_df = df[df["mode"] == "bus"]
-subway_df = df[(df["mode"] == "subway") & (df["route"] == SUBWAY_LINE_OF_INTEREST)]
+# Exclude multi-hour diversions/major incidents before averaging — a single
+# ~16-hour diversion logged in one hour bucket would otherwise wreck that
+# hour's average and make the recommendation meaningless. See config.py.
+typical, disruptions = split_typical_and_disruptions(df)
+bus_df = typical[typical["mode"] == "bus"]
+subway_df = typical[(typical["mode"] == "subway") & (typical["route"] == SUBWAY_LINE_OF_INTEREST)]
 
 if subway_df.empty:
     st.info(
@@ -192,7 +197,9 @@ st.altair_chart(line_chart, use_container_width=True)
 
 st.caption(
     f"Subway leg filtered to Line 2 (Bloor–Danforth) — the direct ride from "
-    f"{KENNEDY_STATION.title()} to {ST_GEORGE_STATION.title()}, no transfer required."
+    f"{KENNEDY_STATION.title()} to {ST_GEORGE_STATION.title()}, no transfer required. "
+    f"{len(disruptions):,} multi-hour diversions/major incidents were excluded from "
+    "these averages so one event doesn't wreck an hour's numbers (see the Overview page)."
 )
 
 with st.expander("Raw combined hour/day table"):

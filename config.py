@@ -57,3 +57,23 @@ DB_PATH = "ttc_delays.db"
 # reference in the commute planner page.
 KENNEDY_STATION = "KENNEDY STATION"
 ST_GEORGE_STATION = "ST GEORGE STATION"
+
+# --- Handling extreme "delay" values ---
+#
+# The City's own delay-code reference (the "Code Descriptions" dataset)
+# confirms MFDV = "ON DIVERSION": TTC logs the *entire duration a route
+# was on a detour* under Min Delay, not how late any one bus was. A
+# multi-hour road closure can legitimately produce a "delay" of 900+
+# minutes for that reason alone — it's real data, but it measures a
+# different thing than "how late was my bus," so it would badly skew
+# any "average/worst delay" metric aimed at a rider's commute.
+DIVERSION_CODES = {"MFDV"}
+
+# Beyond diversions, both the bus and subway datasets occasionally log
+# huge Min Delay values under other codes too (e.g. a track intrusion or
+# multi-hour incident) — verifiable in principle from TTC's own code
+# reference, but not all of it is machine-readable, so instead of trying
+# to enumerate every such code, we treat any single record above this
+# threshold as an "extended disruption" rather than a typical trip delay.
+# 3 hours is well beyond anything a rider would call "my bus was late."
+EXTENDED_DISRUPTION_THRESHOLD_MIN = 180
