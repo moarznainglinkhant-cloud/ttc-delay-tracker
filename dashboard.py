@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 
 from config import DB_PATH
-from theme import ACCENT, SEQUENTIAL_SCHEME, apply_altair_theme, inject_page_css
+from theme import ACCENT, BUS_SEQUENTIAL_SCHEME, apply_altair_theme, inject_page_css
 
 st.set_page_config(page_title="UTSC Commute Delay Tracker", page_icon="🚌", layout="wide")
 apply_altair_theme()
@@ -94,7 +94,7 @@ with left:
             x=alt.X("route_label:N", title=None, sort="-y", axis=alt.Axis(labelAngle=-40)),
             y=alt.Y("min_delay:Q", title="Total delay (min)"),
             color=alt.Color(
-                "min_delay:Q", scale=alt.Scale(scheme=SEQUENTIAL_SCHEME), legend=None
+                "min_delay:Q", scale=alt.Scale(scheme=BUS_SEQUENTIAL_SCHEME), legend=None
             ),
             tooltip=[
                 alt.Tooltip("route_label:N", title="Route"),
@@ -154,7 +154,7 @@ code_chart = (
     .encode(
         y=alt.Y("code:N", title=None, sort="-x"),
         x=alt.X("count:Q", title="Events"),
-        color=alt.Color("count:Q", scale=alt.Scale(scheme=SEQUENTIAL_SCHEME), legend=None),
+        color=alt.Color("count:Q", scale=alt.Scale(scheme=BUS_SEQUENTIAL_SCHEME), legend=None),
         tooltip=[alt.Tooltip("code:N", title="Code"), alt.Tooltip("count:Q", title="Events")],
     )
     .properties(height=320)

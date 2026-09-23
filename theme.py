@@ -2,7 +2,7 @@
 Shared visual language for both dashboard pages, so charts read as one
 system instead of each page inventing its own colors.
 
-Palette choices:
+Palette choices (light theme):
 - ACCENT (single hue, blue) drives every "magnitude" chart (bar/line
   totals, sequential heatmap) — sequential = one hue, light to dark.
 - Two-series comparisons (bus vs. subway) use ACCENT paired with a
@@ -15,11 +15,12 @@ from __future__ import annotations
 
 import altair as alt
 
-ACCENT = "#3B82F6"       # blue — primary series / sequential magnitude
-ACCENT_DARK = "#1D4ED8"
-WARM = "#F59E0B"          # amber — the "second thing" in a two-way comparison
-MUTED_GRID = "#2A2E3A"
-MUTED_TEXT = "#9AA4B2"
+ACCENT = "#2563EB"       # blue — primary series / sequential magnitude
+ACCENT_DARK = "#1E40AF"
+WARM = "#D97706"          # amber — the "second thing" in a two-way comparison
+MUTED_GRID = "#E5E7EB"
+MUTED_TEXT = "#6B7280"
+INK = "#111827"
 
 SEQUENTIAL_SCHEME = "blues"     # for Altair scale(scheme=...)
 CATEGORICAL_RANGE = [ACCENT, WARM]
@@ -35,7 +36,7 @@ def apply_altair_theme() -> None:
             "config": {
                 "background": "transparent",
                 "font": BASE_FONT,
-                "title": {"font": BASE_FONT, "fontSize": 14, "fontWeight": 600, "color": "#E6E9EF"},
+                "title": {"font": BASE_FONT, "fontSize": 14, "fontWeight": 600, "color": INK},
                 "axis": {
                     "labelFont": BASE_FONT,
                     "titleFont": BASE_FONT,
@@ -73,8 +74,8 @@ def inject_page_css() -> str:
 
     /* Metric cards: subtle bordered surface instead of bare numbers */
     div[data-testid="stMetric"] {
-        background-color: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background-color: rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(0, 0, 0, 0.08);
         border-radius: 10px;
         padding: 14px 16px 10px 16px;
     }
