@@ -8,7 +8,7 @@ year the models never saw.
 ![CI](https://github.com/moarznainglinkhant-cloud/ttc-delay-tracker/actions/workflows/ci.yml/badge.svg)
 
 **Live dashboard:** https://ttc-delay-tracker-56pbzhwscg9z9k7tbuyzlm.streamlit.app/
-(open "Delay Forecast" in the sidebar)
+(open "Delay Forecast" or "Predict a Delay" in the sidebar)
 
 ## Results
 
@@ -20,12 +20,15 @@ surface routes, 5+ min on the subway).
 
 | Mode | Best simple baseline (AUC) | Model (AUC) |
 |---|---|---|
-| Subway | 0.61 | **0.79** |
+| Subway | 0.69 | **0.79** |
 | Bus | 0.84 | **0.87** |
 | Streetcar | 0.73 | 0.74 |
 
-The model clearly earns its keep on the subway. For buses a per-route lookup
-table is almost as good, and for streetcars there is no real gain. Flagging
+The gains are real but modest. For buses a per-route lookup table is almost
+as good, and for streetcars there is no real gain. On the subway, much of the
+score comes from a single field (a blank direction almost always means no
+train was held); among the 19,279 incidents where a train was involved, the
+model scores 0.66 against 0.57 for the best baseline. Flagging
 the riskiest 20% of bus incidents catches 50% of all long bus delays, and 77%
 of those flags are correct (base rate: 31%).
 
@@ -43,6 +46,15 @@ neither model on an average day. But on days with 5 to 10 cm of snow, bus
 delays run 27% above normal (95% CI 21% to 35%, 69 days), and on the 27 days
 with 10+ cm they run 57% above (CI 20% to 62%).
 
+**4. Unreliable, or just busy?** Joining the TTC's published timetable (11.1
+million scheduled bus trips a year) turns raw counts into delays per 1,000
+scheduled trips, and the ranking changes: 63 Ossington is 7th by raw count
+but 115th by rate, while 34 Eglinton is 20th by count and 1st by rate. The
+timetable also explains the bus result above: 47% of logged bus delays are
+within 20% of the route's scheduled gap between buses, and that gap alone
+scores 0.71 AUC. Adding it to the model moved bus AUC only from 0.868 to
+0.874, so it was left out.
+
 ## How it works
 
 ```
@@ -52,12 +64,15 @@ download_raw.py  ->  build_dataset.py  ->  train.py  ->  reports/  ->  dashboard
 
 | Step | What it does |
 |---|---|
-| `pipeline/download_raw.py` | Pulls 40 delay files from Toronto Open Data and 336 weather files from Environment Canada, with retries and a manifest. |
+| `pipeline/download_raw.py` | Pulls 40 delay files and the TTC timetable from Toronto Open Data and 336 weather files from Environment Canada, with retries and a manifest. |
 | `pipeline/harmonize.py` | Pure functions that reconcile 12 years of format changes (see below). Fully unit tested. |
 | `pipeline/build_dataset.py` | Applies them, drops bad rows with a count for every reason, writes Parquet and a data-quality report. |
 | `pipeline/features.py` | Leak-safe features: lagged history, calendar and Ontario holidays, daily and hourly weather. |
+| `pipeline/schedule.py` | Parses the TTC timetable (GTFS, 104k trips) into scheduled trips and headway by route, hour and day type. |
+| `pipeline/reliability.py` | Delays per 1,000 scheduled trips, headway analysis, and the timetable ablation. |
 | `pipeline/train.py` | Trains both models, runs baselines, ablations and bootstrap intervals, writes `reports/`. |
-| `pages/2_Delay_Forecast.py` | Dashboard page that reads `reports/` only, so the deployed app needs no ML libraries. |
+| `pages/2_Delay_Forecast.py` | Dashboard page presenting the evaluation, read from `reports/`. |
+| `pages/3_Predict_a_Delay.py` | Interactive predictor: describe an incident, get the chance it runs long, scored live by the exported model in `models/`. |
 
 ### The data cleaning
 
@@ -82,9 +97,10 @@ an independently built earlier version of this project to within 0.3%.
 
 - **Split by time.** Train through Sept 2024, tune on the next 12 months, score
   once on the final 12. A random split would let the model see the future.
-- **Strong baselines.** The classifier is compared with both a per-cause rate
-  and a per-route, per-time-of-day rate. The second one is what exposed that
-  most of the bus result is simply knowing the route.
+- **Strong baselines.** The classifier is compared with a per-cause rate, a
+  per-route, per-time-of-day rate, and a one-field rule (was a direction
+  recorded). The second exposed that most of the bus result is simply knowing
+  the route; the third did the same for the subway.
 - **No answer leakage.** `Min Gap` is recorded alongside `Min Delay` and
   correlates 0.95 with it, so it is excluded. A test enforces this.
 - **Ablation.** Features were added in stages. Weather did not improve either
@@ -102,6 +118,8 @@ an independently built earlier version of this project to within 0.3%.
   habits visibly shift between years.
 - The weather-aware forecast uses observed weather, i.e. a perfect forecast.
 - Heavy-snow days are rare (27 in 12 years), so those intervals are wide.
+- Only the current timetable is published, so per-trip rates apply today's
+  service levels to the past 12 months.
 - The City refreshes the delay data monthly, so the most recent few weeks are
   never available.
 
@@ -118,8 +136,10 @@ To rebuild everything from the public sources (about 15 minutes):
 pip install -r requirements-pipeline.txt
 python -m pipeline.download_raw       # ~130 MB into data/raw/
 python -m pipeline.build_dataset      # -> data/processed/*.parquet
-python -m pipeline.train              # -> reports/
-pytest -q                             # 100 tests
+python -m pipeline.schedule           # -> data/processed/schedule.parquet
+python -m pipeline.train              # -> reports/ and models/
+python -m pipeline.reliability        # -> reports/route_reliability.csv
+pytest -q                             # 106 tests
 ```
 
 ## Also in this repo
@@ -141,5 +161,7 @@ pytest, GitHub Actions.
   [Streetcar](https://open.toronto.ca/dataset/ttc-streetcar-delay-data/) and
   [Subway](https://open.toronto.ca/dataset/ttc-subway-delay-data/),
   City of Toronto Open Data
+- [TTC Routes and Schedules](https://open.toronto.ca/dataset/ttc-routes-and-schedules/)
+  (GTFS), City of Toronto Open Data
 - [Historical climate data](https://climate.weather.gc.ca/), Environment and
   Climate Change Canada (Toronto Pearson and Toronto City stations)

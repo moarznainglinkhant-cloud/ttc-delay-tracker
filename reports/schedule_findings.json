@@ -1,0 +1,58 @@
+{
+  "period": "2025-10-01 to 2026-09-30",
+  "by_mode": {
+    "bus": {
+      "scheduled_trips_per_year": 11113599,
+      "delays_per_1000_trips": 5.3,
+      "long_delays_per_1000_trips": 1.6
+    },
+    "streetcar": {
+      "scheduled_trips_per_year": 1872905,
+      "delays_per_1000_trips": 7.1,
+      "long_delays_per_1000_trips": 1.5
+    },
+    "subway": {
+      "scheduled_trips_per_year": 644639,
+      "delays_per_1000_trips": 43.6,
+      "long_delays_per_1000_trips": 7.5
+    }
+  },
+  "bus_rank_correlation_count_vs_rate": 0.79,
+  "headway": {
+    "bus": {
+      "matched_to_timetable_pct": 96.1,
+      "spearman_delay_vs_headway": 0.46,
+      "delay_within_20pct_of_headway_pct": 46.8,
+      "auc_headway_alone": 0.711
+    },
+    "streetcar": {
+      "matched_to_timetable_pct": 92.2,
+      "spearman_delay_vs_headway": 0.01,
+      "delay_within_20pct_of_headway_pct": 19.4,
+      "auc_headway_alone": 0.502
+    },
+    "subway": {
+      "matched_to_timetable_pct": 95.9,
+      "spearman_delay_vs_headway": 0.19,
+      "delay_within_20pct_of_headway_pct": 31.1,
+      "auc_headway_alone": 0.544
+    }
+  },
+  "ablation_auc": {
+    "route id (reported model)": {
+      "bus": 0.868,
+      "streetcar": 0.742,
+      "subway": 0.789
+    },
+    "route id + timetable": {
+      "bus": 0.874,
+      "streetcar": 0.737,
+      "subway": 0.787
+    },
+    "timetable instead of route id": {
+      "bus": 0.806,
+      "streetcar": 0.741,
+      "subway": 0.788
+    }
+  }
+}

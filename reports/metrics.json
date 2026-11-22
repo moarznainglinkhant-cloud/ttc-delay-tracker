@@ -257,6 +257,7 @@
         }
       }
     },
+    "best_iteration": 393,
     "baseline": {
       "bus": {
         "long_delay_rate": 0.31,
@@ -288,6 +289,37 @@
         "pr_auc": 0.187
       }
     },
+    "baseline_direction_recorded": {
+      "bus": {
+        "auc": 0.513
+      },
+      "streetcar": {
+        "auc": 0.527
+      },
+      "subway": {
+        "auc": 0.69
+      }
+    },
+    "direction_recorded_only": {
+      "bus": {
+        "incidents": 46307,
+        "long_delay_rate": 0.317,
+        "auc_model": 0.869,
+        "auc_best_baseline": 0.84
+      },
+      "streetcar": {
+        "incidents": 10122,
+        "long_delay_rate": 0.227,
+        "auc_model": 0.74,
+        "auc_best_baseline": 0.724
+      },
+      "subway": {
+        "incidents": 19279,
+        "long_delay_rate": 0.248,
+        "auc_model": 0.661,
+        "auc_best_baseline": 0.57
+      }
+    },
     "flag_top_20pct": {
       "bus": {
         "share_of_long_delays_caught_pct": 49.5,
@@ -302,5 +334,10 @@
         "precision_pct": 37.3
       }
     }
+  },
+  "predictor": {
+    "trees": 393,
+    "training_rows": 797505,
+    "routes_in_menu": 186
   }
 }

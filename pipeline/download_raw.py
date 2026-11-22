@@ -14,6 +14,7 @@ Run:
     python -m pipeline.download_raw            # everything
     python -m pipeline.download_raw --only ttc
     python -m pipeline.download_raw --only weather
+    python -m pipeline.download_raw --only gtfs
 """
 from __future__ import annotations
 
@@ -34,6 +35,9 @@ TTC_PACKAGES = {
 }
 # The City publishes each recent resource in four formats; one is enough.
 WANTED_FORMATS = {"XLSX", "CSV"}
+
+# The TTC's published timetable (GTFS): every scheduled trip and stop time.
+GTFS_PACKAGE = "ttc-routes-and-schedules"
 
 ECCC_BULK_URL = "https://climate.weather.gc.ca/climate_data/bulk_data_e.html"
 # ECCC station IDs (not the same thing as climate IDs).
@@ -110,6 +114,34 @@ def download_ttc(manifest: list[dict]) -> None:
             time.sleep(0.3)  # be polite
 
 
+def download_gtfs(manifest: list[dict]) -> None:
+    """Fetch the current TTC schedule. Only the current timetable is
+    published (no history), so it describes service levels as of the
+    download date."""
+    print(f"[gtfs] listing resources in {GTFS_PACKAGE}")
+    pkg = get(f"{CKAN_BASE_URL}/api/3/action/package_show", params={"id": GTFS_PACKAGE}).json()["result"]
+    out_dir = RAW_DIR / "gtfs"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for res in pkg["resources"]:
+        if (res.get("format") or "").upper() != "ZIP":
+            continue
+        content = get(res["url"]).content
+        dest = out_dir / "ttc_gtfs.zip"
+        dest.write_bytes(content)
+        print(f"    {dest.name}  {len(content) / 1e6:.1f} MB (published {res.get('last_modified')})")
+        manifest.append(
+            {
+                "source": "toronto-open-data",
+                "package": GTFS_PACKAGE,
+                "resource_id": res["id"],
+                "last_modified": res.get("last_modified"),
+                "file": str(dest),
+                "bytes": len(content),
+            }
+        )
+        break
+
+
 def download_weather(manifest: list[dict]) -> None:
     today = dt.date.today()
     for label, station_id in WEATHER_STATIONS.items():
@@ -162,7 +194,7 @@ def _weather_file(manifest, label, station_id, dest: Path, year: int, month: int
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--only", choices=["ttc", "weather"], help="download just one source")
+    parser.add_argument("--only", choices=["ttc", "weather", "gtfs"], help="download just one source")
     args = parser.parse_args()
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -171,8 +203,11 @@ def main() -> int:
         download_ttc(manifest)
     if args.only in (None, "weather"):
         download_weather(manifest)
+    if args.only in (None, "gtfs"):
+        download_gtfs(manifest)
 
-    (RAW_DIR / "manifest.json").write_text(
+    manifest_name = "manifest.json" if args.only is None else f"manifest_{args.only}.json"
+    (RAW_DIR / manifest_name).write_text(
         json.dumps({"fetched_at": dt.datetime.now(dt.timezone.utc).isoformat(), "files": manifest}, indent=2)
     )
     total_mb = sum(f["bytes"] for f in manifest) / 1e6

@@ -4,3 +4,4 @@ streamlit>=1.35
 altair>=5.0
 pytest>=8.0
 holidays>=0.50
+lightgbm>=4.3

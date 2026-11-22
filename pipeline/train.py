@@ -193,6 +193,12 @@ def train_long_delay(incidents: pd.DataFrame, reports: Path) -> dict:
     lookup = lookup.fillna(route_test.map(route_only.rename(index=str)))
     test_frame["route_lookup"] = lookup.fillna(test_frame["baseline"]).to_numpy()
 
+    # A third, deliberately crude baseline: was a direction recorded at
+    # all? On the subway a blank direction almost always means no train
+    # was held (0.5% of those run long), so this one field carries a lot
+    # of signal that has nothing to do with modelling skill.
+    test_frame["direction_recorded"] = incidents.loc[test, "direction"].notna().astype(int).to_numpy()
+
     results: dict = {
         "train_rows": int(train.sum()), "test_rows": int(test.sum()),
         "thresholds_min": ft.LONG_DELAY_MIN, "by_stage": {},
@@ -220,6 +226,7 @@ def train_long_delay(incidents: pd.DataFrame, reports: Path) -> dict:
         if stage == "+ cause":
             gain = pd.Series(model.booster_.feature_importance("gain"), index=cols)
             importances = (gain / gain.sum()).sort_values(ascending=False)
+            results["best_iteration"] = int(model.best_iteration_ or model.n_estimators)
 
     results["baseline"] = {
         mode: {
@@ -236,6 +243,25 @@ def train_long_delay(incidents: pd.DataFrame, reports: Path) -> dict:
             "pr_auc": round(float(average_precision_score(g["long_delay"], g["route_lookup"])), 3),
         }
         for mode, g in test_frame.groupby("mode")
+    }
+
+    results["baseline_direction_recorded"] = {
+        mode: {"auc": round(float(roc_auc_score(g["long_delay"], g["direction_recorded"])), 3)}
+        for mode, g in test_frame.groupby("mode")
+    }
+    # The harder question: among incidents where a direction *was*
+    # recorded (a vehicle was involved), can the model still rank them?
+    with_direction = test_frame[test_frame["direction_recorded"] == 1]
+    results["direction_recorded_only"] = {
+        mode: {
+            "incidents": int(len(g)),
+            "long_delay_rate": round(float(g["long_delay"].mean()), 3),
+            "auc_model": round(float(roc_auc_score(g["long_delay"], g["+ cause"])), 3),
+            "auc_best_baseline": round(
+                max(float(roc_auc_score(g["long_delay"], g["baseline"])), float(roc_auc_score(g["long_delay"], g["route_lookup"]))), 3
+            ),
+        }
+        for mode, g in with_direction.groupby("mode")
     }
 
     # Is a predicted 70% actually ~70%? (calibration, per mode)
@@ -263,12 +289,107 @@ def train_long_delay(incidents: pd.DataFrame, reports: Path) -> dict:
 
 
 # --------------------------------------------------------------------------
+# 3. Export a model the dashboard can call
+# --------------------------------------------------------------------------
+
+SUBWAY_NAMES = {
+    "YU": "Line 1 Yonge-University", "BD": "Line 2 Bloor-Danforth", "SHP": "Line 4 Sheppard",
+    "SRT": "Line 3 Scarborough (closed 2023)", "MULTI": "Interchange (more than one line)",
+}
+PREDICTOR_FEATURES = ft.INCIDENT_BASE_FEATURES + ["cause_cat"]
+HOUR_BLOCKS = [-1, 5, 9, 15, 19, 23]  # overnight, AM peak, midday, PM peak, evening
+
+
+def route_names(delays: pd.DataFrame) -> dict[str, str]:
+    """'bus:116' -> 'Morningside', taken from the most common spelling in the logs."""
+    surface = delays[delays["mode"] != "subway"]
+    named = surface["route_raw"].astype(str).str.extract(r"^\s*(\d{1,3})\s+([A-Za-z].*)$")
+    frame = pd.DataFrame({"key": surface["mode"] + ":" + named[0], "name": named[1].str.strip().str.title()}).dropna()
+    frame = frame[~frame["name"].str.contains(r"\d|Shuttle|Line ", regex=True)]
+    names = frame.groupby("key")["name"].agg(lambda x: x.value_counts().index[0]).to_dict()
+    names.update({f"subway:{code}": name for code, name in SUBWAY_NAMES.items()})
+    return names
+
+
+def export_predictor(incidents: pd.DataFrame, delays: pd.DataFrame, n_trees: int, out_dir: Path) -> dict:
+    """Refit the reported classifier on every available year and save it,
+    plus the menus and historical rates the dashboard needs.
+
+    The scores in metrics.json come from the model that never saw the
+    test year. This refit uses the same features and the same number of
+    trees but all the data, which is the right model to actually use.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    data = incidents[incidents["date"] >= "2018-01-01"].reset_index(drop=True)
+    model = lgb.LGBMClassifier(
+        n_estimators=n_trees, learning_rate=0.1, num_leaves=63, min_child_samples=100,
+        subsample=0.8, subsample_freq=1, colsample_bytree=0.8, cat_smooth=20,
+        max_cat_threshold=32, max_bin=63, random_state=SEED, verbose=-1,
+    )
+    model.fit(data[PREDICTOR_FEATURES], data["long_delay"])
+    model.booster_.save_model(str(out_dir / "long_delay.txt"))
+
+    options = predictor_options(data, delays)
+    (out_dir / "predictor_options.json").write_text(json.dumps(options))
+    return {"trees": n_trees, "training_rows": int(len(data)), "routes_in_menu": len(options["routes"])}
+
+
+def predictor_options(data: pd.DataFrame, delays: pd.DataFrame) -> dict:
+    """Menus and historical rates for the dashboard's predictor page."""
+    # Menus come from the last two years so retired routes and stops don't appear.
+    last_date = data["date"].max()
+    recent = data[data["date"] > last_date - pd.Timedelta(days=730)].copy()
+    recent["block"] = pd.cut(recent["hour"], HOUR_BLOCKS, labels=False)
+    names = route_names(delays)
+
+    routes: dict = {}
+    for key, grp in recent.groupby("route_cat", observed=True):
+        if len(grp) < 100:
+            continue
+        mode, number = str(key).split(":")
+        # A stop or direction has to account for a real share of the route's
+        # incidents to be offered; stray entries are logging noise.
+        floor = max(10, 0.02 * len(grp))
+        locations = grp.loc[~grp["location_cat"].isin(["OTHER", "UNKNOWN"]), "location_cat"].astype(str).value_counts()
+        locations = locations[locations >= floor]
+        directions = grp["direction_cat"].astype(str).value_counts()
+        directions = directions[(directions >= 0.05 * len(grp)) & (directions.index != "UNKNOWN")]
+        by_block = grp.groupby("block")["long_delay"].agg(["mean", "size"])
+        routes[str(key)] = {
+            "mode": mode,
+            "number": number,
+            "name": names.get(str(key), ""),
+            "incidents": int(len(grp)),
+            "long_rate": round(float(grp["long_delay"].mean()), 4),
+            "locations": locations.head(10).index.tolist(),
+            "directions": directions.index.tolist(),
+            "rate_by_block": {int(b): [round(float(r["mean"]), 4), int(r["size"])] for b, r in by_block.iterrows()},
+        }
+
+    options = {
+        "features": PREDICTOR_FEATURES,
+        "trained_through": str(last_date.date()),
+        "days_since_2014": int((last_date - pd.Timestamp("2014-01-01")).days),
+        "thresholds_min": ft.LONG_DELAY_MIN,
+        "hour_blocks": HOUR_BLOCKS,
+        "mode_long_rate": {m: round(float(g["long_delay"].mean()), 4) for m, g in recent.groupby("mode")},
+        "causes": {
+            m: g["cause"].astype(str).value_counts().loc[lambda c: c >= 50].index.tolist()
+            for m, g in recent.groupby("mode")
+        },
+        "routes": routes,
+    }
+    return options
+
+
+# --------------------------------------------------------------------------
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data", type=Path, default=Path("data/processed"))
     parser.add_argument("--reports", type=Path, default=Path("reports"))
+    parser.add_argument("--models", type=Path, default=Path("models"))
     args = parser.parse_args()
     args.reports.mkdir(parents=True, exist_ok=True)
 
@@ -300,6 +421,9 @@ def main() -> int:
     print("Long-delay classifier ...")
     incidents = ft.incident_table(delays, weather_hourly, weather_daily)
     metrics["long_delay"] = train_long_delay(incidents, args.reports)
+
+    print("Exporting the dashboard model ...")
+    metrics["predictor"] = export_predictor(incidents, delays, metrics["long_delay"]["best_iteration"], args.models)
 
     (args.reports / "metrics.json").write_text(json.dumps(metrics, indent=2))
     print(json.dumps(metrics["daily_forecast"]["by_stage"], indent=2))

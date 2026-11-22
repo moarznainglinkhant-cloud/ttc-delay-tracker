@@ -56,7 +56,11 @@ st.caption(
 
 
 def best_baseline_auc(mode: str) -> float:
-    return max(long_delay["baseline"][mode]["auc"], long_delay["baseline_route_lookup"][mode]["auc"])
+    return max(
+        long_delay["baseline"][mode]["auc"],
+        long_delay["baseline_route_lookup"][mode]["auc"],
+        long_delay["baseline_direction_recorded"][mode]["auc"],
+    )
 
 
 final_stage = long_delay["by_stage"]["+ cause"]
@@ -101,17 +105,18 @@ with left:
         rows += [
             {"mode": MODE_LABEL[mode], "who": "Baseline: rate by cause", "auc": long_delay["baseline"][mode]["auc"]},
             {"mode": MODE_LABEL[mode], "who": "Baseline: rate by route and time", "auc": long_delay["baseline_route_lookup"][mode]["auc"]},
+            {"mode": MODE_LABEL[mode], "who": "Baseline: was a direction recorded", "auc": long_delay["baseline_direction_recorded"][mode]["auc"]},
             {"mode": MODE_LABEL[mode], "who": "Model", "auc": final_stage[mode]["auc"]},
         ]
-    order = ["Baseline: rate by cause", "Baseline: rate by route and time", "Model"]
+    order = ["Baseline: rate by cause", "Baseline: rate by route and time", "Baseline: was a direction recorded", "Model"]
     auc_chart = (
         alt.Chart(pd.DataFrame(rows))
         .mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3)
         .encode(
             x=alt.X("who:N", title=None, sort=order, axis=alt.Axis(labels=False, ticks=False)),
             y=alt.Y("auc:Q", title="AUC on the unseen year", scale=alt.Scale(domain=[0.5, 0.9], clamp=True)),
-            color=alt.Color("who:N", sort=order, title=None, scale=alt.Scale(domain=order, range=["#D1D5DB", "#9CA3AF", BUS_COLOR]),
-                            legend=alt.Legend(orient="bottom")),
+            color=alt.Color("who:N", sort=order, title=None, scale=alt.Scale(domain=order, range=["#D1D5DB", "#9CA3AF", "#6B7280", BUS_COLOR]),
+                            legend=alt.Legend(orient="bottom", columns=2, labelLimit=260)),
             column=alt.Column("mode:N", title=None, sort=["Bus", "Streetcar", "Subway"]),
             tooltip=[alt.Tooltip("mode:N", title="Mode"), alt.Tooltip("who:N", title="Method"), alt.Tooltip("auc:Q", title="AUC", format=".3f")],
         )
@@ -141,8 +146,15 @@ with right:
     )
     st.markdown(
         "**Reading this honestly.** For buses, a plain lookup of each route's history is almost as good as the "
-        "model: logged bus delays largely reflect how far apart buses are scheduled on that route. The model adds "
-        "the most on the subway, where no simple lookup works. Streetcar shows no real gain."
+        "model: logged bus delays largely reflect how far apart buses are scheduled on that route. Streetcar shows "
+        "no real gain."
+    )
+    sub = long_delay["direction_recorded_only"]["subway"]
+    st.markdown(
+        f"On the subway, much of the score comes from one field: when no direction is recorded, a train was "
+        f"rarely held. Among the {sub['incidents']:,} incidents where a train was involved, the model scores "
+        f"**{sub['auc_model']:.2f}** against **{sub['auc_best_baseline']:.2f}** for the best baseline, which is "
+        "the fairer measure of what it adds."
     )
 
 cal_left, cal_right = st.columns(2)
@@ -272,6 +284,71 @@ st.caption(
     "so those intervals are wide; the 5-10 cm bus effect is the best-supported one."
 )
 
+# --------------------------------------------------------------------------
+# 4. Scheduled service as a denominator
+# --------------------------------------------------------------------------
+rel_path, find_path = REPORTS / "route_reliability.csv", REPORTS / "schedule_findings.json"
+if rel_path.exists() and find_path.exists():
+    findings = json.loads(find_path.read_text())
+    reliability = pd.read_csv(rel_path)
+    bus = reliability[(reliability["mode"] == "bus") & reliability["rank_by_rate"].notna()].copy()
+    bus["label"] = bus["route"].astype(str) + " " + bus["route_name"]
+
+    st.divider()
+    st.subheader("4. Unreliable, or just busy?")
+    st.write(
+        "A route can top the delay count simply because it runs a lot of buses. Joining the TTC's published "
+        f"timetable ({findings['by_mode']['bus']['scheduled_trips_per_year'] / 1e6:.1f} million scheduled bus trips a "
+        "year) turns raw counts into delays per 1,000 scheduled trips, and the ranking changes."
+    )
+
+    def top_chart(frame: pd.DataFrame, value: str, title: str, color: str) -> alt.Chart:
+        return (
+            alt.Chart(frame)
+            .mark_bar(color=color, cornerRadiusTopRight=3, cornerRadiusBottomRight=3)
+            .encode(
+                y=alt.Y("label:N", title=None, sort="-x", axis=alt.Axis(labelLimit=200)),
+                x=alt.X(f"{value}:Q", title=title),
+                tooltip=[
+                    alt.Tooltip("label:N", title="Route"), alt.Tooltip("delays:Q", title="Delays logged", format=",.0f"),
+                    alt.Tooltip("trips_per_year:Q", title="Scheduled trips a year", format=",.0f"),
+                    alt.Tooltip("delays_per_1000_trips:Q", title="Per 1,000 trips"),
+                    alt.Tooltip("rank_by_count:Q", title="Rank by count"), alt.Tooltip("rank_by_rate:Q", title="Rank by rate"),
+                ],
+            )
+            .properties(height=300)
+        )
+
+    by_count, by_rate = st.columns(2)
+    with by_count:
+        st.markdown("**Most delays logged** (raw count)")
+        st.altair_chart(top_chart(bus.nsmallest(10, "rank_by_count"), "delays", "Delays logged in 12 months", "#9CA3AF"), width="stretch")
+    with by_rate:
+        st.markdown("**Most delays per 1,000 scheduled trips**")
+        st.altair_chart(top_chart(bus.nsmallest(10, "rank_by_rate"), "delays_per_1000_trips", "Delays per 1,000 trips", BUS_COLOR), width="stretch")
+
+    movers = bus[bus["rank_by_count"] <= 10].assign(drop=lambda d: d["rank_by_rate"] - d["rank_by_count"]).nlargest(1, "drop").iloc[0]
+    worst = bus.nsmallest(1, "rank_by_rate").iloc[0]
+    hw = findings["headway"]["bus"]
+    ab = findings["ablation_auc"]
+    st.markdown(
+        f"- **{movers['label']}** is #{int(movers['rank_by_count'])} by raw count but #{int(movers['rank_by_rate'])} "
+        f"by rate: it logs many delays because it runs {movers['trips_per_year']:,.0f} trips a year.\n"
+        f"- **{worst['label']}** is the reverse: #{int(worst['rank_by_count'])} by count, #1 by rate "
+        f"({worst['delays_per_1000_trips']:.1f} per 1,000 trips).\n"
+        f"- The timetable also confirms why route predicts bus delays so well: {hw['delay_within_20pct_of_headway_pct']:.0f}% "
+        f"of logged bus delays are within 20% of that route's scheduled gap between buses, and the scheduled gap alone "
+        f"scores {hw['auc_headway_alone']:.2f} AUC at predicting a long delay.\n"
+        f"- Adding the timetable to the model moved bus AUC from {ab['route id (reported model)']['bus']:.3f} to "
+        f"{ab['route id + timetable']['bus']:.3f}, too small to justify, so the reported model does not use it. "
+        f"Replacing the route ID with timetable features alone still reaches {ab['timetable instead of route id']['bus']:.2f}, "
+        "which is what a model would have to rely on for a brand-new route."
+    )
+    st.caption(
+        f"Delays from {findings['period']}; bus routes with at least 20,000 scheduled trips a year. Only the current "
+        "timetable is published, so today's service levels are applied to the whole period."
+    )
+
 with st.expander("Method and limits"):
     st.markdown(
         f"""
@@ -289,4 +366,4 @@ with st.expander("Method and limits"):
 """
     )
 
-st.caption("Sources: City of Toronto Open Data (TTC bus, streetcar and subway delay data); Environment and Climate Change Canada historical weather.")
+st.caption("Sources: City of Toronto Open Data (TTC bus, streetcar and subway delay data; TTC routes and schedules); Environment and Climate Change Canada historical weather.")
