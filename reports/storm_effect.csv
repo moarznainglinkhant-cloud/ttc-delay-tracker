@@ -1,0 +1,16 @@
+snow_band,mode,days,delays_vs_normal_pct,ci95_low_pct,ci95_high_pct,delay_minutes_vs_normal_pct
+none,bus,4085,-0.0,-1.0,1.0,-3.0
+none,streetcar,4085,-3.0,-4.0,-2.0,-9.0
+none,subway,4085,-0.0,-1.0,1.0,-9.0
+under 2 cm,bus,347,-1.0,-6.0,1.0,-4.0
+under 2 cm,streetcar,347,1.0,-5.0,7.0,-3.0
+under 2 cm,subway,347,2.0,-2.0,6.0,-8.0
+2-5 cm,bus,100,6.0,-2.0,16.0,2.0
+2-5 cm,streetcar,100,7.0,-2.0,12.0,-2.0
+2-5 cm,subway,100,1.0,-1.0,13.0,1.0
+5-10 cm,bus,69,27.0,21.0,35.0,29.0
+5-10 cm,streetcar,69,4.0,-3.0,13.0,11.0
+5-10 cm,subway,69,9.0,4.0,21.0,1.0
+10+ cm,bus,27,57.0,20.0,62.0,70.0
+10+ cm,streetcar,27,7.0,-9.0,49.0,85.0
+10+ cm,subway,27,16.0,-5.0,49.0,33.0

@@ -1,0 +1,8 @@
+# Only needed to rebuild the dataset and retrain the models
+# (python -m pipeline.download_raw / build_dataset / train).
+# The dashboard itself runs on requirements.txt alone.
+-r requirements.txt
+openpyxl>=3.1
+pyarrow>=15
+lightgbm>=4.3
+scikit-learn>=1.4

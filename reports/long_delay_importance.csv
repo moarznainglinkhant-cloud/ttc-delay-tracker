@@ -1,0 +1,10 @@
+feature,share_of_gain
+route_cat,0.5471
+cause_cat,0.1188
+hour,0.0838
+location_cat,0.0717
+days_since_2014,0.0686
+direction_cat,0.0547
+dow,0.0232
+mode_cat,0.021
+month,0.0111

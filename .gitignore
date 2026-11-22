@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+
+# Raw and processed datasets (large; rebuilt by the pipeline)
+data/

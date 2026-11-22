@@ -1,0 +1,306 @@
+{
+  "data": {
+    "delay_records": 1246841,
+    "first_date": "2014-01-01",
+    "last_date": "2026-09-30",
+    "routes": 313,
+    "weather_hours": 112941
+  },
+  "split": {
+    "train_through": "2024-09-30",
+    "validation_through": "2025-09-30",
+    "test": "2025-10-01 to 2026-09-30"
+  },
+  "daily_forecast": {
+    "test_days": 365,
+    "by_stage": {
+      "calendar + recent history": {
+        "bus": {
+          "mean_daily_delays": 163.6,
+          "mae_baseline": 30.39,
+          "mae_model": 25.59,
+          "improvement_pct": 15.8,
+          "ci95_low_pct": 7.1,
+          "ci95_high_pct": 23.5
+        },
+        "streetcar": {
+          "mean_daily_delays": 36.8,
+          "mae_baseline": 7.03,
+          "mae_model": 7.13,
+          "improvement_pct": -1.5,
+          "ci95_low_pct": -7.4,
+          "ci95_high_pct": 4.0
+        },
+        "subway": {
+          "mean_daily_delays": 78.0,
+          "mae_baseline": 13.29,
+          "mae_model": 10.35,
+          "improvement_pct": 22.1,
+          "ci95_low_pct": 15.5,
+          "ci95_high_pct": 28.1
+        }
+      },
+      "+ weather": {
+        "bus": {
+          "mean_daily_delays": 163.6,
+          "mae_baseline": 30.39,
+          "mae_model": 25.5,
+          "improvement_pct": 16.1,
+          "ci95_low_pct": 6.9,
+          "ci95_high_pct": 23.8
+        },
+        "streetcar": {
+          "mean_daily_delays": 36.8,
+          "mae_baseline": 7.03,
+          "mae_model": 7.24,
+          "improvement_pct": -3.0,
+          "ci95_low_pct": -10.7,
+          "ci95_high_pct": 3.5
+        },
+        "subway": {
+          "mean_daily_delays": 78.0,
+          "mae_baseline": 13.29,
+          "mae_model": 10.31,
+          "improvement_pct": 22.4,
+          "ci95_low_pct": 15.8,
+          "ci95_high_pct": 28.6
+        }
+      }
+    }
+  },
+  "storm_effect": [
+    {
+      "snow_band": "none",
+      "mode": "bus",
+      "days": 4085,
+      "delays_vs_normal_pct": -0.0,
+      "ci95_low_pct": -1.0,
+      "ci95_high_pct": 1.0,
+      "delay_minutes_vs_normal_pct": -3.0
+    },
+    {
+      "snow_band": "none",
+      "mode": "streetcar",
+      "days": 4085,
+      "delays_vs_normal_pct": -3.0,
+      "ci95_low_pct": -4.0,
+      "ci95_high_pct": -2.0,
+      "delay_minutes_vs_normal_pct": -9.0
+    },
+    {
+      "snow_band": "none",
+      "mode": "subway",
+      "days": 4085,
+      "delays_vs_normal_pct": -0.0,
+      "ci95_low_pct": -1.0,
+      "ci95_high_pct": 1.0,
+      "delay_minutes_vs_normal_pct": -9.0
+    },
+    {
+      "snow_band": "under 2 cm",
+      "mode": "bus",
+      "days": 347,
+      "delays_vs_normal_pct": -1.0,
+      "ci95_low_pct": -6.0,
+      "ci95_high_pct": 1.0,
+      "delay_minutes_vs_normal_pct": -4.0
+    },
+    {
+      "snow_band": "under 2 cm",
+      "mode": "streetcar",
+      "days": 347,
+      "delays_vs_normal_pct": 1.0,
+      "ci95_low_pct": -5.0,
+      "ci95_high_pct": 7.0,
+      "delay_minutes_vs_normal_pct": -3.0
+    },
+    {
+      "snow_band": "under 2 cm",
+      "mode": "subway",
+      "days": 347,
+      "delays_vs_normal_pct": 2.0,
+      "ci95_low_pct": -2.0,
+      "ci95_high_pct": 6.0,
+      "delay_minutes_vs_normal_pct": -8.0
+    },
+    {
+      "snow_band": "2-5 cm",
+      "mode": "bus",
+      "days": 100,
+      "delays_vs_normal_pct": 6.0,
+      "ci95_low_pct": -2.0,
+      "ci95_high_pct": 16.0,
+      "delay_minutes_vs_normal_pct": 2.0
+    },
+    {
+      "snow_band": "2-5 cm",
+      "mode": "streetcar",
+      "days": 100,
+      "delays_vs_normal_pct": 7.0,
+      "ci95_low_pct": -2.0,
+      "ci95_high_pct": 12.0,
+      "delay_minutes_vs_normal_pct": -2.0
+    },
+    {
+      "snow_band": "2-5 cm",
+      "mode": "subway",
+      "days": 100,
+      "delays_vs_normal_pct": 1.0,
+      "ci95_low_pct": -1.0,
+      "ci95_high_pct": 13.0,
+      "delay_minutes_vs_normal_pct": 1.0
+    },
+    {
+      "snow_band": "5-10 cm",
+      "mode": "bus",
+      "days": 69,
+      "delays_vs_normal_pct": 27.0,
+      "ci95_low_pct": 21.0,
+      "ci95_high_pct": 35.0,
+      "delay_minutes_vs_normal_pct": 29.0
+    },
+    {
+      "snow_band": "5-10 cm",
+      "mode": "streetcar",
+      "days": 69,
+      "delays_vs_normal_pct": 4.0,
+      "ci95_low_pct": -3.0,
+      "ci95_high_pct": 13.0,
+      "delay_minutes_vs_normal_pct": 11.0
+    },
+    {
+      "snow_band": "5-10 cm",
+      "mode": "subway",
+      "days": 69,
+      "delays_vs_normal_pct": 9.0,
+      "ci95_low_pct": 4.0,
+      "ci95_high_pct": 21.0,
+      "delay_minutes_vs_normal_pct": 1.0
+    },
+    {
+      "snow_band": "10+ cm",
+      "mode": "bus",
+      "days": 27,
+      "delays_vs_normal_pct": 57.0,
+      "ci95_low_pct": 20.0,
+      "ci95_high_pct": 62.0,
+      "delay_minutes_vs_normal_pct": 70.0
+    },
+    {
+      "snow_band": "10+ cm",
+      "mode": "streetcar",
+      "days": 27,
+      "delays_vs_normal_pct": 7.0,
+      "ci95_low_pct": -9.0,
+      "ci95_high_pct": 49.0,
+      "delay_minutes_vs_normal_pct": 85.0
+    },
+    {
+      "snow_band": "10+ cm",
+      "mode": "subway",
+      "days": 27,
+      "delays_vs_normal_pct": 16.0,
+      "ci95_low_pct": -5.0,
+      "ci95_high_pct": 49.0,
+      "delay_minutes_vs_normal_pct": 33.0
+    }
+  ],
+  "long_delay": {
+    "train_rows": 596678,
+    "test_rows": 101638,
+    "thresholds_min": {
+      "bus": 20,
+      "streetcar": 20,
+      "subway": 5
+    },
+    "by_stage": {
+      "route, place, time": {
+        "bus": {
+          "auc": 0.836,
+          "pr_auc": 0.701
+        },
+        "streetcar": {
+          "auc": 0.572,
+          "pr_auc": 0.26
+        },
+        "subway": {
+          "auc": 0.755,
+          "pr_auc": 0.341
+        }
+      },
+      "+ cause": {
+        "bus": {
+          "auc": 0.868,
+          "pr_auc": 0.739
+        },
+        "streetcar": {
+          "auc": 0.742,
+          "pr_auc": 0.403
+        },
+        "subway": {
+          "auc": 0.789,
+          "pr_auc": 0.389
+        }
+      },
+      "+ weather": {
+        "bus": {
+          "auc": 0.867,
+          "pr_auc": 0.738
+        },
+        "streetcar": {
+          "auc": 0.736,
+          "pr_auc": 0.405
+        },
+        "subway": {
+          "auc": 0.786,
+          "pr_auc": 0.38
+        }
+      }
+    },
+    "baseline": {
+      "bus": {
+        "long_delay_rate": 0.31,
+        "auc": 0.608,
+        "pr_auc": 0.398
+      },
+      "streetcar": {
+        "long_delay_rate": 0.215,
+        "auc": 0.73,
+        "pr_auc": 0.398
+      },
+      "subway": {
+        "long_delay_rate": 0.169,
+        "auc": 0.613,
+        "pr_auc": 0.243
+      }
+    },
+    "baseline_route_lookup": {
+      "bus": {
+        "auc": 0.835,
+        "pr_auc": 0.694
+      },
+      "streetcar": {
+        "auc": 0.576,
+        "pr_auc": 0.273
+      },
+      "subway": {
+        "auc": 0.541,
+        "pr_auc": 0.187
+      }
+    },
+    "flag_top_20pct": {
+      "bus": {
+        "share_of_long_delays_caught_pct": 49.5,
+        "precision_pct": 76.6
+      },
+      "streetcar": {
+        "share_of_long_delays_caught_pct": 41.7,
+        "precision_pct": 44.8
+      },
+      "subway": {
+        "share_of_long_delays_caught_pct": 44.1,
+        "precision_pct": 37.3
+      }
+    }
+  }
+}
